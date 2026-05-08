@@ -1,0 +1,43 @@
+CREATE TABLE IF NOT EXISTS jobs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    external_id VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    company_name VARCHAR(255) NOT NULL,
+    location VARCHAR(255) NOT NULL,
+    employment_type VARCHAR(255) NOT NULL DEFAULT '',
+    salary_text VARCHAR(255) NOT NULL DEFAULT '',
+    is_remote BOOLEAN NOT NULL DEFAULT FALSE,
+    is_international BOOLEAN NOT NULL DEFAULT FALSE,
+    url TEXT NOT NULL,
+    source VARCHAR(100) NOT NULL,
+    description MEDIUMTEXT NOT NULL,
+    published_at DATETIME NULL,
+    scraped_at DATETIME NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_jobs_external_source (external_id, source),
+    INDEX idx_jobs_title (title),
+    INDEX idx_jobs_company_name (company_name),
+    INDEX idx_jobs_location (location),
+    INDEX idx_jobs_is_remote (is_remote),
+    INDEX idx_jobs_is_international (is_international),
+    INDEX idx_jobs_published_at (published_at),
+    INDEX idx_jobs_scraped_at (scraped_at)
+);
+
+CREATE TABLE IF NOT EXISTS sync_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    source VARCHAR(100) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    total_fetched INT NOT NULL DEFAULT 0,
+    total_inserted INT NOT NULL DEFAULT 0,
+    total_updated INT NOT NULL DEFAULT 0,
+    started_at DATETIME NOT NULL,
+    finished_at DATETIME NULL,
+    error_message TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_sync_logs_source (source),
+    INDEX idx_sync_logs_status (status),
+    INDEX idx_sync_logs_started_at (started_at)
+);
