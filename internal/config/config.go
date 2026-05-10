@@ -35,7 +35,7 @@ func Load() (Config, error) {
 		MySQLPassword:       getEnv("MYSQL_PASSWORD", "stockvacancy"),
 		MySQLDatabase:       getEnv("MYSQL_DATABASE", "stockvacancy"),
 		MySQLParams:         getEnv("MYSQL_PARAMS", "parseTime=true&multiStatements=true"),
-		SourceAPIURL:        getEnv("SOURCE_API_URL", "https://www.kalibrr.com/home/te/software/loc/Indonesia"),
+		SourceAPIURL:        getEnv("SOURCE_API_URL", ""),
 		SourceQueries:       getEnvAsCSV("SOURCE_QUERIES", []string{"software", "backend", "frontend", "mobile", "data", "devops", "golang", "java", "python", "qa"}),
 		SyncIntervalMinutes: 0, // set below
 	}

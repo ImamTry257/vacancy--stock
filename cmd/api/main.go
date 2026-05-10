@@ -32,7 +32,7 @@ func main() {
 
 	jobRepo := mysqlrepo.NewJobRepository(db)
 	syncLogRepo := mysqlrepo.NewSyncLogRepository(db)
-	source := sourceRepo.NewKalibrrRepository(cfg.SourceAPIURL, cfg.SourceQueries)
+	source := sourceRepo.NewAggregatorRepository(cfg.SourceAPIURL, cfg.SourceQueries)
 	jobUsecase := usecase.NewJobUsecase(jobRepo, syncLogRepo, source)
 	httpHandler := handler.NewHTTPHandler(jobUsecase)
 

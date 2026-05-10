@@ -66,7 +66,7 @@ func TestStripHTMLBasic(t *testing.T) {
 			want:  "Hello",
 		},
 		{
-			name:  "real kalibrr snippet",
+			name:  "real aggregator snippet",
 			input: "<ul>\n\t<li>Build backend services</li>\n\t<li>Write unit tests</li>\n</ul>\n\n<ul>\n\t<li>Min. 3 years experience</li>\n\t<li>Proficient in Go &amp; MySQL</li>\n</ul>",
 			// each <li> and </li> become \n; blank lines between groups collapse to max 2
 			want: "Build backend services\n\nWrite unit tests\n\nMin. 3 years experience\n\nProficient in Go & MySQL",

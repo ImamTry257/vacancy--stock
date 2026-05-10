@@ -18,15 +18,15 @@ import (
 
 var nextDataPattern = regexp.MustCompile(`(?s)<script id="__NEXT_DATA__" type="application/json">(.*?)</script>`)
 
-type kalibrrNextData struct {
+type aggregatorNextData struct {
 	Props struct {
 		PageProps struct {
-			Jobs []kalibrrJob `json:"jobs"`
+			Jobs []aggregatorJob `json:"jobs"`
 		} `json:"pageProps"`
 	} `json:"props"`
 }
 
-type kalibrrJob struct {
+type aggregatorJob struct {
 	ID               int64   `json:"id"`
 	Name             string  `json:"name"`
 	Slug             string  `json:"slug"`
@@ -50,14 +50,14 @@ type kalibrrJob struct {
 	} `json:"googleLocation"`
 }
 
-type KalibrrRepository struct {
+type AggregatorRepository struct {
 	baseURL  string
 	queries  []string
 	client   *http.Client
 	sourceID string
 }
 
-func NewKalibrrRepository(baseURL string, queries []string) *KalibrrRepository {
+func NewAggregatorRepository(baseURL string, queries []string) *AggregatorRepository {
 	normalizedQueries := make([]string, 0, len(queries))
 	seen := make(map[string]struct{})
 	for _, query := range queries {
@@ -76,21 +76,21 @@ func NewKalibrrRepository(baseURL string, queries []string) *KalibrrRepository {
 		normalizedQueries = []string{"software"}
 	}
 
-	return &KalibrrRepository{
+	return &AggregatorRepository{
 		baseURL:  strings.TrimSpace(baseURL),
 		queries:  normalizedQueries,
 		client:   &http.Client{Timeout: 20 * time.Second},
-		sourceID: "kalibrr-indonesia",
+		sourceID: "job-aggregator",
 	}
 }
 
-func (r *KalibrrRepository) FetchJobs(ctx context.Context) ([]entity.Job, error) {
+func (r *AggregatorRepository) FetchJobs(ctx context.Context) ([]entity.Job, error) {
 	jobMap := make(map[string]entity.Job)
 
 	for _, query := range r.queries {
 		jobs, err := r.fetchJobsForQuery(ctx, query)
 		if err != nil {
-			return nil, fmt.Errorf("fetch kalibrr query %q: %w", query, err)
+			return nil, fmt.Errorf("fetch aggregator query %q: %w", query, err)
 		}
 		for _, job := range jobs {
 			if existing, exists := jobMap[job.ExternalID]; exists {
@@ -126,7 +126,7 @@ func (r *KalibrrRepository) FetchJobs(ctx context.Context) ([]entity.Job, error)
 	return jobs, nil
 }
 
-func (r *KalibrrRepository) fetchJobsForQuery(ctx context.Context, query string) ([]entity.Job, error) {
+func (r *AggregatorRepository) fetchJobsForQuery(ctx context.Context, query string) ([]entity.Job, error) {
 	requestURL, err := r.buildQueryURL(query)
 	if err != nil {
 		return nil, fmt.Errorf("build query url: %w", err)
@@ -134,48 +134,48 @@ func (r *KalibrrRepository) fetchJobsForQuery(ctx context.Context, query string)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("build kalibrr request: %w", err)
+		return nil, fmt.Errorf("build aggregator request: %w", err)
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0")
 
 	resp, err := r.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("request kalibrr page: %w", err)
+		return nil, fmt.Errorf("request aggregator page: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("kalibrr page returned status %d", resp.StatusCode)
+		return nil, fmt.Errorf("aggregator page returned status %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("read kalibrr page body: %w", err)
+		return nil, fmt.Errorf("read aggregator page body: %w", err)
 	}
 
 	matches := nextDataPattern.FindStringSubmatch(string(body))
 	if len(matches) < 2 {
-		return nil, fmt.Errorf("kalibrr next data payload not found")
+		return nil, fmt.Errorf("aggregator next data payload not found")
 	}
 
-	var payload kalibrrNextData
+	var payload aggregatorNextData
 	if err := json.Unmarshal([]byte(matches[1]), &payload); err != nil {
-		return nil, fmt.Errorf("decode kalibrr next data: %w", err)
+		return nil, fmt.Errorf("decode aggregator next data: %w", err)
 	}
 
 	scrapedAt := time.Now().UTC()
 	jobs := make([]entity.Job, 0, len(payload.Props.PageProps.Jobs))
 	for _, item := range payload.Props.PageProps.Jobs {
-		jobs = append(jobs, mapKalibrrJob(item, scrapedAt, r.SourceName(), requestURL))
+		jobs = append(jobs, mapAggregatorJob(item, scrapedAt, r.SourceName(), requestURL))
 	}
 
 	return jobs, nil
 }
 
-func (r *KalibrrRepository) buildQueryURL(query string) (string, error) {
+func (r *AggregatorRepository) buildQueryURL(query string) (string, error) {
 	base := strings.TrimRight(r.baseURL, "/")
 	if base == "" {
-		base = "https://www.kalibrr.com/home/te/software/loc/Indonesia"
+		return "", fmt.Errorf("SOURCE_API_URL is not configured")
 	}
 
 	parsed, err := url.Parse(base)
@@ -196,7 +196,7 @@ func (r *KalibrrRepository) buildQueryURL(query string) (string, error) {
 	return parsed.String(), nil
 }
 
-func mapKalibrrJob(item kalibrrJob, scrapedAt time.Time, sourceName string, requestURL string) entity.Job {
+func mapAggregatorJob(item aggregatorJob, scrapedAt time.Time, sourceName string, requestURL string) entity.Job {
 	var publishedAt *time.Time
 	if item.ActivationDate != "" {
 		if parsed, parseErr := time.Parse(time.RFC3339Nano, item.ActivationDate); parseErr == nil {
@@ -221,7 +221,7 @@ func mapKalibrrJob(item kalibrrJob, scrapedAt time.Time, sourceName string, requ
 		locationParts = append(locationParts, item.GoogleLocation.AddressComponents.Country)
 	}
 
-	jobURL := buildKalibrrJobURL(requestURL, item.Slug)
+	jobURL := buildAggregatorJobURL(requestURL, item.Slug)
 	if item.ApplyRedirectURL != nil && *item.ApplyRedirectURL != "" {
 		jobURL = *item.ApplyRedirectURL
 	}
@@ -290,15 +290,18 @@ func richnessScore(job entity.Job) int {
 	return score
 }
 
-func (r *KalibrrRepository) SourceName() string {
+func (r *AggregatorRepository) SourceName() string {
 	return r.sourceID
 }
 
-func buildKalibrrJobURL(baseURL string, slug string) string {
-	if strings.Contains(baseURL, "127.0.0.1") || strings.Contains(baseURL, "localhost") {
+func buildAggregatorJobURL(baseURL string, slug string) string {
+	parsed, err := url.Parse(baseURL)
+	if err != nil {
 		return strings.TrimRight(baseURL, "/") + "/job/" + slug
 	}
-	return "https://www.kalibrr.com/job/" + slug
+	parsed.Path = "/job/" + slug
+	parsed.RawQuery = ""
+	return parsed.String()
 }
 
 // isInternationalCountry returns true if the country is NOT Indonesia.
@@ -317,4 +320,4 @@ func isInternationalCountry(country string) bool {
 	return true
 }
 
-var _ repository.SourceRepository = (*KalibrrRepository)(nil)
+var _ repository.SourceRepository = (*AggregatorRepository)(nil)

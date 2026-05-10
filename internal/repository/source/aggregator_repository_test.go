@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestFetchJobsFromKalibrrMapsIndonesianJobs(t *testing.T) {
+func TestFetchJobsFromAggregatorMapsIndonesianJobs(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		fmt.Fprint(w, `<!DOCTYPE html><html><body><script id="__NEXT_DATA__" type="application/json">{
@@ -41,7 +41,7 @@ func TestFetchJobsFromKalibrrMapsIndonesianJobs(t *testing.T) {
 	}))
 	defer server.Close()
 
-	repo := NewKalibrrRepository(server.URL+"/home/te/software/loc/Indonesia", []string{"software"})
+	repo := NewAggregatorRepository(server.URL+"/home/te/software/loc/Indonesia", []string{"software"})
 	jobs, err := repo.FetchJobs(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -62,10 +62,10 @@ func TestFetchJobsFromKalibrrMapsIndonesianJobs(t *testing.T) {
 	if job.EmploymentType != "Full time" {
 		t.Fatalf("unexpected employment type: %s", job.EmploymentType)
 	}
-	if job.Source != "kalibrr-indonesia" {
+	if job.Source != "job-aggregator" {
 		t.Fatalf("unexpected source: %s", job.Source)
 	}
-	if job.URL != server.URL+"/home/te/software/loc/Indonesia/job/software-engineer-5" {
+	if job.URL != server.URL+"/job/software-engineer-5" {
 		t.Fatalf("unexpected url: %s", job.URL)
 	}
 	if job.Remote {
@@ -76,7 +76,7 @@ func TestFetchJobsFromKalibrrMapsIndonesianJobs(t *testing.T) {
 	}
 }
 
-func TestFetchJobsFromKalibrrDeduplicatesAcrossQueries(t *testing.T) {
+func TestFetchJobsFromAggregatorDeduplicatesAcrossQueries(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		body := `<!DOCTYPE html><html><body><script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"jobs":[]}}}</script></body></html>`
@@ -90,7 +90,7 @@ func TestFetchJobsFromKalibrrDeduplicatesAcrossQueries(t *testing.T) {
 	}))
 	defer server.Close()
 
-	repo := NewKalibrrRepository(server.URL+"/home/te/software/loc/Indonesia", []string{"software", "backend"})
+	repo := NewAggregatorRepository(server.URL+"/home/te/software/loc/Indonesia", []string{"software", "backend"})
 	jobs, err := repo.FetchJobs(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
